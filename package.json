@@ -1,0 +1,25 @@
+{
+  "name": "fetch-reddit-media",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Fetch the media links of a Reddit profile or subreddit",
+  "main": "main.js",
+  "scripts": {
+    "fetch": "node ./src/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vmbdev/fetch-reddit-media.git"
+  },
+  "author": "Borja V.M",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vmbdev/fetch-reddit-media/issues"
+  },
+  "homepage": "https://github.com/vmbdev/fetch-reddit-media#readme",
+  "dependencies": {
+    "axios": "^0.26.0",
+    "jsdom": "^19.0.0",
+    "snoowrap": "^1.23.0"
+  }
+}
