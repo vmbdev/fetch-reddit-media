@@ -2,12 +2,12 @@ import axios from 'axios';
 import { JSDOM } from 'jsdom';
 
 export class VidbleClient {
-  constructor() {
-    this.endpoint = 'https://www.vidble.com',
-      this.urlTemplates = {
-        images: /https?\:\/\/(?:www\.)?vidble.com\/(?:show|album)\/(\w+)/ig,
-      };
-  }
+  endpoint = 'https://www.vidble.com';
+  urlTemplates = {
+    images: /https?\:\/\/(?:www\.)?vidble.com\/(?:show|album)\/(\w+)/ig,
+  };
+
+  constructor() {}
 
   async getImages(url) {
     var conn;

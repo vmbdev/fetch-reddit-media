@@ -1,14 +1,18 @@
-import { gfycatConfig, imgurConfig, snoowrapConfig } from '../config.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { URL } from 'node:url';
+import axios from 'axios';
 import snoowrap from 'snoowrap';
+
 import { ImgurClient } from './imgurclient.js';
 import { GfycatClient } from './gfycatclient.js';
 import { RedgifsClient } from './redgifsclient.js';
 import { VidbleClient } from './vidbleclient.js';
-import fs from 'fs';
 
-const OUTPUT_FILE = './results.json';
+import { resultFile, gfycatConfig, imgurConfig, snoowrapConfig } from '../config.js';
+import { exit } from 'node:process';
 
-function addLinks(link, list) {
+const addLinks = (link, list) => {
   if (link) {
     if (link.constructor.name === "Array") {
       let unique_values = link.filter(i => !list.includes(i));
@@ -20,73 +24,150 @@ function addLinks(link, list) {
   }
 }
 
-(function() {
-  if (!process.argv[2])
-  console.error('Not enough parameters');
+const download = async (url, dest) => {
+  const response = await axios.get(url, { responseType: 'stream' });
 
-  else if (process.argv.length >= 3) {
-    if (process.argv[2] == '--user') {
-      let link_list = [];
-      let promise_list = [];
-      const reddit = new snoowrap(snoowrapConfig);
-      const imgur = new ImgurClient(imgurConfig);
-      const gfycat = new GfycatClient(gfycatConfig);
-      const redgifs = new RedgifsClient();
-      const vidble = new VidbleClient();
-      
-      reddit.getUser(process.argv[3]).getSubmissions().fetchAll()
-      .then(async post_list => {
-        if (Array.isArray(post_list)) {
-          for (let post of post_list) {
-            if (post.media_metadata) {
-              let media_list = [];
-              
-              for (let media in post.media_metadata) {
-                if (post.media_metadata[media].status == 'valid')
-                  media_list.push(post.media_metadata[media].s.u);
-              }
+  if (response) {
+    // extract filename from URL
+    const nurl = new URL(url);
+    const filename = path.basename(nurl.pathname);
 
-              addLinks(media_list, link_list);
-            }
-            else {
-              if (post.url) {
-                if (imgur.isValidUrl(post.url))
-                  promise_list.push(imgur.getMedia(post.url));
-                
-                else if (gfycat.isValidUrl(post.url)) {
-                  let gfyid = gfycat.extractUrl(post.url, 'gfycat');
-                  promise_list.push(gfycat.getGfycat(gfyid));
-                }
+    response.data.pipe(fs.createWriteStream(path.join(dest, filename)));
+  };
+}
 
-                else if (redgifs.isValidUrl(post.url)) 
-                  promise_list.push(redgifs.getGif(post.url));
+const processArgs = () => {
+  const args = {};
 
-                else if (vidble.isValidUrl(post.url))
-                  promise_list.push(vidble.getImages(post.url));
-                
-                else
-                  addLinks(post.url, link_list);
-              }
-            }
-          }
-          await Promise.all(promise_list.map(async (promise) => {
-            let link = await promise;
-            addLinks(link, link_list);
-          }));
+  for (let i = 1; i < process.argv.length; i++) {
+    switch (process.argv[i]) {
+      case '--user': {
+        if (process.argv[i+1]) {
+          args.user = process.argv[i+1];
+          i++;
         }
-      })
-      .then(() => {
-        fs.stat(OUTPUT_FILE, (err) => {
-          if (!err)
-            fs.unlink(OUTPUT_FILE, err => { if (err) throw `Error deleting previous file: ${err.code}` });
-
-          fs.writeFile(OUTPUT_FILE, JSON.stringify(link_list), err => { if (err) throw `Error writing results: ${err.code}` });
-        });
-      });
-    }
-    
-    else {
-      console.error('Unrecognized options');
+        break;
+      }
+      case '--download': {
+        args.download = true;
+        break;
+      }
+      case '--dest': {
+        if (process.argv[i+1]) {
+          args.dest = process.argv[i+1];
+          i++;
+        }
+        break;
+      }
     }
   }
-})();
+
+  return args;
+}
+
+const exitWithError = (error) => {
+  console.error(error);
+  exit();
+}
+
+
+const main = async () => {
+  const args = processArgs();
+
+  if (!args.user) exitWithError('User not specified');
+
+  const reddit = new snoowrap(snoowrapConfig);
+  const imgur = new ImgurClient(imgurConfig);
+  const gfycat = new GfycatClient(gfycatConfig);
+  const redgifs = new RedgifsClient();
+  const vidble = new VidbleClient();
+  const redditLinks = [];
+  const downloadList = [];
+
+  let posts;
+  try {
+    posts = await reddit.getUser(args.user).getSubmissions().fetchAll();
+  } catch (error) {
+    console.error(`Error: can't fetch user ${args.user}`);
+    exit();
+  }
+
+  for (const post of posts) {
+    // if content is uploaded directly to Reddit
+    if (post.media_metadata) {
+      const mediaLinks = [];
+
+      for (const media in post.media_metadata) {
+        if (post.media_metadata[media].status == 'valid')
+          mediaLinks.push(post.media_metadata[media].s.u);
+      }
+
+      addLinks(mediaLinks, redditLinks);
+    }
+
+    // if content is uploaded to a third-party (imgur, gfycat, etc)
+    else {
+      if (post.url) {
+        if (imgur.isValidUrl(post.url))
+          downloadList.push(imgur.getMedia(post.url));
+
+        else if (gfycat.isValidUrl(post.url)) {
+          const gfyid = gfycat.extractUrl(post.url, 'gfycat');
+          downloadList.push(gfycat.getGfycat(gfyid));
+        }
+
+        else if (redgifs.isValidUrl(post.url))
+          downloadList.push(redgifs.getGif(post.url));
+
+        else if (vidble.isValidUrl(post.url))
+          downloadList.push(vidble.getImages(post.url));
+
+        else
+          addLinks(post.url, redditLinks);
+      }
+    }
+  }
+
+  // retrieve in parallel the links
+  await Promise.all(downloadList.map(async (download) => {
+    const link = await download;
+    addLinks(link, redditLinks);
+  }));
+
+  if (redditLinks.length > 0) {
+    if (args.download) {
+      const dest = args.dest ? args.dest : `./downloads/${args.user}`;
+      fs.mkdirSync(dest, { recursive: true });
+
+      for (const link of redditLinks) {
+        console.log(`Downloading ${link}`);
+
+        try {
+          await download(link, dest);
+        } catch (err) {
+          console.error(`Failed to download ${link}`);
+        }
+      }
+    }
+    else {
+      fs.stat(resultFile, (err) => {
+        // if results file exists, delete (unlink) it
+        if (!err) {
+          try {
+            fs.unlinkSync(resultFile);
+          } catch (err) {
+            exitWithError(`Error deleting previous file: ${err.code}`);
+          }
+        }
+
+        try {
+          fs.writeFile(resultFile, redditLinks.join('\r\n'));
+        } catch (err) {
+          exitWithError(`Error writing results: ${err.code}`);
+        }
+      });
+    }
+  }
+}
+
+main();

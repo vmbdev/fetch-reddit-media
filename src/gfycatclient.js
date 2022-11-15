@@ -2,15 +2,16 @@ import axios from 'axios';
 import { RedgifsClient } from './redgifsclient.js';
 
 export class GfycatClient {
+  endpoint = 'https://api.gfycat.com/v1';
+  urlTemplates = {
+    gfycat: /https?\:\/\/gfycat.com(?:\/gifs\/detail)?\/(\w+)(?:\-.*)?/ig,
+  };
+
   constructor(config) {
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
     this.accessToken = config.accessToken ? config.accessToken : null;
-    this.endpoint = 'https://api.gfycat.com/v1';
     this.headers = { headers: { 'Authorization': `Bearer ${this.accessToken}` } };
-    this.urlTemplates = {
-      gfycat: /https?\:\/\/gfycat.com(?:\/gifs\/detail)?\/(\w+)(?:\-.*)?/ig,
-    };
   }
 
   async getAccessToken() {

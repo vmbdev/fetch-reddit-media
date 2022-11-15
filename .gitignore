@@ -1,5 +1,5 @@
 .vscode
 node_modules
 config.js
-package-lock.json
-results.json
+results.txt
+downloads

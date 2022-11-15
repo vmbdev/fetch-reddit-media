@@ -1,3 +1,5 @@
+export const resultFile = './results.txt';
+
 export const snoowrapConfig = {
   userAgent: '',
   clientId: '',

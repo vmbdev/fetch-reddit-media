@@ -1,16 +1,19 @@
 import axios from 'axios';
 
 export class ImgurClient {
+  endpoint = 'https://api.imgur.com/3';
+  urlTemplates = {
+    main: /https?\:\/\/(?:(?:www|i|m)\.)?imgur.com\/.*/ig,
+    album: /https?\:\/\/(?:m\.)?imgur.com\/a\/(\w+)$/ig,
+    gifv: /https?\:\/\/(?:(?:www|i|m)\.)?imgur.com\/(.+)\.gifv$/ig,
+    image: /https?\:\/\/(?:m\.)?imgur.com\/(\w+)$/ig
+  };
+
   constructor(config) {
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
-    this.endpoint = 'https://api.imgur.com/3';
-    this.headers = { headers: { 'Authorization': `Client-ID ${this.clientId}` } };
-    this.urlTemplates = {
-      main: /https?\:\/\/(?:(?:www|i|m)\.)?imgur.com\/.*/ig,
-      album: /https?\:\/\/(?:m\.)?imgur.com\/a\/(\w+)$/ig,
-      gifv: /https?\:\/\/(?:(?:www|i|m)\.)?imgur.com\/(.+)\.gifv$/ig,
-      image: /https?\:\/\/(?:m\.)?imgur.com\/(\w+)$/ig
+    this.headers = {
+      headers: { 'Authorization': `Client-ID ${this.clientId}` }
     };
   }
 

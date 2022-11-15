@@ -1,6 +1,6 @@
 {
   "name": "fetch-reddit-media",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "Fetch the media links of a Reddit profile or subreddit",
   "main": "main.js",
@@ -18,8 +18,8 @@
   },
   "homepage": "https://github.com/vmbdev/fetch-reddit-media#readme",
   "dependencies": {
-    "axios": "^0.26.0",
-    "jsdom": "^19.0.0",
+    "axios": "^1.1.3",
+    "jsdom": "^20.0.2",
     "snoowrap": "^1.23.0"
   }
 }
