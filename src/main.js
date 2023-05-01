@@ -14,8 +14,8 @@ import { exit } from 'node:process';
 
 const addLinks = (link, list) => {
   if (link) {
-    if (link.constructor.name === "Array") {
-      let unique_values = link.filter(i => !list.includes(i));
+    if (Array.isArray(link)) {
+      const unique_values = link.filter(i => !list.includes(i));
       list.push(...unique_values);
     }
 
@@ -46,6 +46,7 @@ const processArgs = () => {
           args.user = process.argv[i+1];
           i++;
         }
+        else exitWithError('Error: "user" must specify a username.');
         break;
       }
       case '--download': {
@@ -57,6 +58,25 @@ const processArgs = () => {
           args.dest = process.argv[i+1];
           i++;
         }
+        else exitWithError('Error: "dest" must specify a valid directory.');
+        break;
+      }
+      case '--max': {
+        if (process.argv[i+1]) {
+          args.max = Number.parseInt(process.argv[i+1]);
+
+          if (!args.max) exitWithError('Error: "max" must be a positive integer.');
+
+          i++;
+        }
+        break;
+      }
+      case '--subreddit': {
+        if (process.argv[i+1]) {
+          args.subreddit = process.argv[i+1];
+          i++;
+        }
+        else exitWithError('Error: "subreddit" must specify a subreddit name.');
         break;
       }
     }
@@ -70,27 +90,41 @@ const exitWithError = (error) => {
   exit();
 }
 
+const getRedditPosts = async (options) => {
+  const reddit = new snoowrap(snoowrapConfig);
+  let postsItem;
+  let posts;
+
+  if (options.source.type === 'user') postsItem = reddit.getUser(options.source.data).getSubmissions();
+  else postsItem = reddit.getSubreddit(options.source.data).getHot();
+
+  try {
+    if (options.max) posts = await postsItem.fetchMore(options.max);
+    else posts = await postsItem.fetchAll();
+  } catch (error) {
+    exitWithError(`Error: can't fetch posts for ${options.source.data}`);
+  }
+
+  return posts;
+}
+
 
 const main = async () => {
   const args = processArgs();
 
-  if (!args.user) exitWithError('User not specified');
+  if (!args.user && !args.subreddit) exitWithError('User or subreddit not specified.');
 
-  const reddit = new snoowrap(snoowrapConfig);
+  const posts = await getRedditPosts({
+    source: args.user ? { type: 'user', data: args.user } : { type: 'subreddit', data: args.subreddit },
+    max: args.max ? args.max : null
+  });
+
   const imgur = new ImgurClient(imgurConfig);
   const gfycat = new GfycatClient(gfycatConfig);
   const redgifs = new RedgifsClient();
   const vidble = new VidbleClient();
   const redditLinks = [];
   const downloadList = [];
-
-  let posts;
-  try {
-    posts = await reddit.getUser(args.user).getSubmissions().fetchAll();
-  } catch (error) {
-    console.error(`Error: can't fetch user ${args.user}`);
-    exit();
-  }
 
   for (const post of posts) {
     // if content is uploaded directly to Reddit
@@ -136,7 +170,7 @@ const main = async () => {
 
   if (redditLinks.length > 0) {
     if (args.download) {
-      const dest = args.dest ? args.dest : `./downloads/${args.user}`;
+      const dest = args.dest ? args.dest : `./downloads/${args.user ? args.user : args.subreddit}`;
       fs.mkdirSync(dest, { recursive: true });
 
       for (const link of redditLinks) {
@@ -150,24 +184,14 @@ const main = async () => {
       }
     }
     else {
-      fs.stat(resultFile, (err) => {
-        // if results file exists, delete (unlink) it
-        if (!err) {
-          try {
-            fs.unlinkSync(resultFile);
-          } catch (err) {
-            exitWithError(`Error deleting previous file: ${err.code}`);
-          }
-        }
-
-        try {
-          fs.writeFile(resultFile, redditLinks.join('\r\n'));
-        } catch (err) {
-          exitWithError(`Error writing results: ${err.code}`);
-        }
+      // overwrite resultFile with the links
+      fs.writeFile(resultFile, redditLinks.join('\r\n'), (err) => {
+        if (err) exitWithError(`Error writing results: ${err}`);
       });
     }
   }
 }
 
-main();
+main().then(() => {
+  console.log('Operation finished');
+});

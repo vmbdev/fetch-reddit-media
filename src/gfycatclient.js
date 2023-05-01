@@ -15,13 +15,13 @@ export class GfycatClient {
   }
 
   async getAccessToken() {
-    let authHeader = {
+    const authHeader = {
       client_id: this.clientId,
       client_secret: this.clientSecret,
       grant_type: 'client_credentials'
     };
 
-    let request = await axios.post(`${this.endpoint}/oauth/token`, authHeader);
+    const request = await axios.post(`${this.endpoint}/oauth/token`, authHeader);
     return request.data;
   }
 
@@ -45,7 +45,7 @@ export class GfycatClient {
   extractUrl(url, type) {
     switch (type) {
       case 'gfycat':
-        let albumHash = this.urlTemplates.gfycat.exec(url);
+        const albumHash = this.urlTemplates.gfycat.exec(url);
         return albumHash ? albumHash[1] : null;
     }
   }

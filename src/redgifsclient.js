@@ -20,10 +20,10 @@ export class RedgifsClient {
 
     const page = new JSDOM(conn.data);
     // FIXME: fix query string processing
-    for (let script of page.window.document.getElementsByTagName("script")) {
+    for (const script of page.window.document.getElementsByTagName("script")) {
       if (script.type === "application/ld+json") {
-        let script_content = JSON.parse(script.text);
-        let video_url = script_content.video.contentUrl.replace(/\-mobile\.mp4$/ig, ".mp4");
+        const script_content = JSON.parse(script.text);
+        const video_url = script_content.video.contentUrl.replace(/\-mobile\.mp4$/ig, ".mp4");
 
         return video_url;
       }
@@ -34,7 +34,7 @@ export class RedgifsClient {
   extractUrl(url, type) {
     switch (type) {
       case 'gif':
-        let gifid = this.urlTemplates.gif.exec(url);
+        const gifid = this.urlTemplates.gif.exec(url);
         return gifid ? gifid[1] : null;
     }
   }
@@ -47,7 +47,3 @@ export class RedgifsClient {
     return !(url.match(this.urlTemplates.gif) == null);
   }
 }
-
-
-
-

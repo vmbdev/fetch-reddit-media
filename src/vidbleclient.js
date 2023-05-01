@@ -20,8 +20,8 @@ export class VidbleClient {
 
     const page = new JSDOM(conn.data);
 
-    let imageList = [];
-    for (let image of page.window.document.getElementsByTagName("img")) {
+    const imageList = [];
+    for (const image of page.window.document.getElementsByTagName("img")) {
       if ((/^img\d/ig).exec(image.className) && (image.src))
         imageList.push(this.createUrl(image.src));
     }
@@ -30,7 +30,7 @@ export class VidbleClient {
   }
 
   createUrl(imageHash) {
-    let filename = imageHash.split("/");
+    const filename = imageHash.split("/");
     return `${this.endpoint}/${filename[filename.length - 1]}`;
   }
 
@@ -38,7 +38,7 @@ export class VidbleClient {
     switch (type) {
       case 'image':
       case 'album':
-        let imagesid = this.urlTemplates.image.exec(url);
+        const imagesid = this.urlTemplates.image.exec(url);
         return imagesid ? imagesid[1] : null;
     }
   }
@@ -47,7 +47,3 @@ export class VidbleClient {
     return !(url.match(this.urlTemplates.images) == null);
   }
 }
-
-
-
-

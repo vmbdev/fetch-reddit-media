@@ -36,8 +36,8 @@ export class ImgurClient {
       console.log(`Imgur: Error fetching album ${albumHash}: ${err.response.status}`);
       return null;
     }
-    let imageList = [];
-    for (let image of response.data.data)
+    const imageList = [];
+    for (const image of response.data.data)
       imageList.push(image.link);
 
     return imageList;
@@ -64,11 +64,11 @@ export class ImgurClient {
   extractUrl(url, type) {
     switch (type) {
       case 'album':
-        let albumHash = this.urlTemplates.album.exec(url);
+        const albumHash = this.urlTemplates.album.exec(url);
         return albumHash ? albumHash[1] : null;
 
       case 'image':
-        let imageHash = this.urlTemplates.image.exec(url);
+        const imageHash = this.urlTemplates.image.exec(url);
         return imageHash ? imageHash[1] : null;
     }
   }
