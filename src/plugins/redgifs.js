@@ -1,15 +1,14 @@
 import axios from 'axios';
 import { JSDOM } from 'jsdom';
+import { BasePlugin } from './baseplugin.js';
 
-export class RedgifsClient {
+export class RedgifsClient extends BasePlugin {
   endpoint = 'https://www.redgifs.com/watch';
   urlTemplates = {
     gif: /https?\:\/\/(?:www\.)?redgifs.com\/watch\/(\w+)(?:\-.*)?/ig,
   };
 
-  constructor() {}
-
-  async getGif(url) {
+  async fetch(url) {
     var conn;
     try {
       conn = await axios.get(url);
@@ -43,7 +42,7 @@ export class RedgifsClient {
     return `${this.endpoint}/${gifid}`;
   }
 
-  isValidUrl(url) {
+  check(url) {
     return !(url.match(this.urlTemplates.gif) == null);
   }
 }

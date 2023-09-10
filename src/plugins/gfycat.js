@@ -1,13 +1,16 @@
 import axios from 'axios';
-import { RedgifsClient } from './redgifsclient.js';
+import { BasePlugin } from './baseplugin.js';
+import { RedgifsClient } from './redgifs.js';
 
-export class GfycatClient {
+export class GfycatClient extends BasePlugin {
   endpoint = 'https://api.gfycat.com/v1';
   urlTemplates = {
     gfycat: /https?\:\/\/gfycat.com(?:\/gifs\/detail)?\/(\w+)(?:\-.*)?/ig,
   };
 
   constructor(config) {
+    super();
+
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
     this.accessToken = config.accessToken ? config.accessToken : null;
@@ -25,13 +28,17 @@ export class GfycatClient {
     return request.data;
   }
 
-  async getGfycat(gfyid) {
+  async fetch(rawUrl) {
     let response;
+    const gfyid = this.extractUrl(rawUrl);
+    const url = `${this.endpoint}/gfycats/${gfyid}`;
+
     try {
-      response = await axios.get(`${this.endpoint}/gfycats/${gfyid}`, this.headers);
-    }
-    catch (err) {
-      console.error(`GfyCat: Error fetching ${gfyid}: ${err.response.status}. Trying with Redgifs.`);
+      response = await axios.get(url, this.headers);
+    } catch (err) {
+      console.error(
+        `GfyCat: Error fetching ${gfyid}: ${err.response.status}. Trying with Redgifs.`
+      );
 
       const redgifs = new RedgifsClient();
       return redgifs.getGif(redgifs.createUrl(gfyid))
@@ -42,15 +49,12 @@ export class GfycatClient {
     return response.data.gfyItem.mp4Url;
   }
 
-  extractUrl(url, type) {
-    switch (type) {
-      case 'gfycat':
-        const albumHash = this.urlTemplates.gfycat.exec(url);
-        return albumHash ? albumHash[1] : null;
-    }
+  extractUrl(url) {
+    const albumHash = this.urlTemplates.gfycat.exec(url);
+    return albumHash ? albumHash[1] : null;
   }
 
-  isValidUrl(url) {
+  check(url) {
     return !(url.match(this.urlTemplates.gfycat) == null);
   }
 }

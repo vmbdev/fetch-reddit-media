@@ -1,16 +1,16 @@
 import axios from 'axios';
 import { JSDOM } from 'jsdom';
+import { BasePlugin } from './baseplugin.js';
 
-export class VidbleClient {
+export class VidbleClient extends BasePlugin {
   endpoint = 'https://www.vidble.com';
   urlTemplates = {
     images: /https?\:\/\/(?:www\.)?vidble.com\/(?:show|album)\/(\w+)/ig,
   };
 
-  constructor() {}
+  async fetch(url) {
+    let conn;
 
-  async getImages(url) {
-    var conn;
     try {
       conn = await axios.get(url);
     } catch (err) {
@@ -19,8 +19,8 @@ export class VidbleClient {
     }
 
     const page = new JSDOM(conn.data);
-
     const imageList = [];
+
     for (const image of page.window.document.getElementsByTagName("img")) {
       if ((/^img\d/ig).exec(image.className) && (image.src))
         imageList.push(this.createUrl(image.src));
@@ -43,7 +43,7 @@ export class VidbleClient {
     }
   }
 
-  isValidUrl(url) {
+  check(url) {
     return !(url.match(this.urlTemplates.images) == null);
   }
 }

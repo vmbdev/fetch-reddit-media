@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { BasePlugin } from './baseplugin.js';
 
-export class ImgurClient {
+export class ImgurClient extends BasePlugin {
   endpoint = 'https://api.imgur.com/3';
   urlTemplates = {
     main: /https?\:\/\/(?:(?:www|i|m)\.)?imgur.com\/.*/ig,
@@ -10,6 +11,8 @@ export class ImgurClient {
   };
 
   constructor(config) {
+    super();
+
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
     this.headers = {
@@ -19,10 +22,14 @@ export class ImgurClient {
 
   async getImage(imageHash) {
     let response;
+    const url = `${this.endpoint}/image/${imageHash}`;
+
     try {
-      response = await axios.get(`${this.endpoint}/image/${imageHash}`, this.headers);
+      response = await axios.get(url, this.headers);
     } catch (err) {
-      console.log(`Imgur: Error fetching image ${imageHash}: ${err.response.status}`);
+      console.log(
+        `Imgur: Error fetching image ${imageHash}: ${err.response.status}`
+      );
       return null;
     }
     return response.data.data.link;
@@ -30,10 +37,14 @@ export class ImgurClient {
 
   async getAlbum(albumHash) {
     let response;
+    const url = `${this.endpoint}/album/${albumHash}/images`;
+
     try {
-      response = await axios.get(`${this.endpoint}/album/${albumHash}/images`, this.headers);
+      response = await axios.get(url, this.headers);
     } catch (err) {
-      console.log(`Imgur: Error fetching album ${albumHash}: ${err.response.status}`);
+      console.log(
+        `Imgur: Error fetching album ${albumHash}: ${err.response.status}`
+      );
       return null;
     }
     const imageList = [];
@@ -47,7 +58,7 @@ export class ImgurClient {
     return url.replace(/gifv$/i, 'mp4');
   }
 
-  async getMedia(url) {
+  async fetch(url) {
     if (url.match(this.urlTemplates.gifv))
       return this.getGifv(url);
 
@@ -73,14 +84,7 @@ export class ImgurClient {
     }
   }
 
-  isValidUrl(url) {
+  check(url) {
     return !(url.match(this.urlTemplates.main) == null);
   }
 }
-
-
-
-
-
-
-
