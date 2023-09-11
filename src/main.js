@@ -170,10 +170,8 @@ const main = async () => {
   }
 
   // retrieve in parallel the links
-  await Promise.all(downloadList.map(async (download) => {
-    const link = await download;
-    addLinks(link, redditLinks);
-  }));
+  const links = await Promise.all(downloadList);
+  addLinks(links, redditLinks);
 
   if (redditLinks.length > 0) {
     if (args.download) {

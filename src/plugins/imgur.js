@@ -32,6 +32,7 @@ export class ImgurClient extends BasePlugin {
       );
       return null;
     }
+
     return response.data.data.link;
   }
 
@@ -47,7 +48,9 @@ export class ImgurClient extends BasePlugin {
       );
       return null;
     }
+
     const imageList = [];
+
     for (const image of response.data.data)
       imageList.push(image.link);
 
@@ -74,13 +77,15 @@ export class ImgurClient extends BasePlugin {
 
   extractUrl(url, type) {
     switch (type) {
-      case 'album':
+      case 'album': {
         const albumHash = this.urlTemplates.album.exec(url);
         return albumHash ? albumHash[1] : null;
+      }
 
-      case 'image':
+      case 'image': {
         const imageHash = this.urlTemplates.image.exec(url);
         return imageHash ? imageHash[1] : null;
+      }
     }
   }
 

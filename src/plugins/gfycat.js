@@ -14,7 +14,11 @@ export class GfycatClient extends BasePlugin {
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
     this.accessToken = config.accessToken ? config.accessToken : null;
-    this.headers = { headers: { 'Authorization': `Bearer ${this.accessToken}` } };
+    this.headers = {
+      headers: {
+        'Authorization': `Bearer ${this.accessToken}`
+      }
+    };
   }
 
   async getAccessToken() {
@@ -23,8 +27,8 @@ export class GfycatClient extends BasePlugin {
       client_secret: this.clientSecret,
       grant_type: 'client_credentials'
     };
-
     const request = await axios.post(`${this.endpoint}/oauth/token`, authHeader);
+
     return request.data;
   }
 

@@ -31,6 +31,7 @@ export class VidbleClient extends BasePlugin {
 
   createUrl(imageHash) {
     const filename = imageHash.split("/");
+
     return `${this.endpoint}/${filename[filename.length - 1]}`;
   }
 
