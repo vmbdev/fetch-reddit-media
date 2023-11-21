@@ -5,7 +5,7 @@ import { RedgifsClient } from './redgifs.js';
 export class GfycatClient extends BasePlugin {
   endpoint = 'https://api.gfycat.com/v1';
   urlTemplates = {
-    gfycat: /https?\:\/\/gfycat.com(?:\/gifs\/detail)?\/(\w+)(?:\-.*)?/ig,
+    gfycat: /https?\:\/\/gfycat.com(?:\/gifs\/detail)?\/(\w+)(?:\-.*)?/i,
   };
 
   constructor(config) {
@@ -34,18 +34,18 @@ export class GfycatClient extends BasePlugin {
 
   async fetch(rawUrl) {
     let response;
-    const gfyid = this.extractUrl(rawUrl);
-    const url = `${this.endpoint}/gfycats/${gfyid}`;
+    const gfyId = this.extractUrl(rawUrl);
+    const url = `${this.endpoint}/gfycats/${gfyId}`;
 
     try {
       response = await axios.get(url, this.headers);
     } catch (err) {
       console.error(
-        `GfyCat: Error fetching ${gfyid}: ${err.response.status}. Trying with Redgifs.`
+        `GfyCat: Error fetching ${gfyId}: ${err.response.status}. Trying with Redgifs.`
       );
 
       const redgifs = new RedgifsClient();
-      return redgifs.getGif(redgifs.createUrl(gfyid))
+      return redgifs.getGif(redgifs.createUrl(gfyId))
         .then(res => res)
         .catch(() => null);
     }
@@ -59,6 +59,6 @@ export class GfycatClient extends BasePlugin {
   }
 
   check(url) {
-    return !(url.match(this.urlTemplates.gfycat) == null);
+    return this.urlTemplates.gfycat.test(url);
   }
 }

@@ -1,22 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { URL } from 'node:url';
+import { exit } from 'node:process';
 import axios from 'axios';
 import snoowrap from 'snoowrap';
+import { Command, InvalidArgumentError } from 'commander';
 
 import { ImgurClient } from './plugins/imgur.js';
-import { GfycatClient } from './plugins/gfycat.js';
 import { RedgifsClient } from './plugins/redgifs.js';
 import { VidbleClient } from './plugins/vidble.js';
 
-import { resultFile, gfycatConfig, imgurConfig, snoowrapConfig } from '../config.js';
-import { exit } from 'node:process';
+import { config } from '../config.js';
 
 const addLinks = (link, list) => {
   if (link) {
     if (Array.isArray(link)) {
-      const unique_values = link.filter(i => !list.includes(i));
-      list.push(...unique_values);
+      const uniqueValues = link.filter(i => !list.includes(i));
+      list.push(...uniqueValues);
     }
 
     else if (!list.includes(link))
@@ -36,53 +36,35 @@ const download = async (url, dest) => {
   };
 }
 
-const processArgs = () => {
-  const args = {};
+const getArgs = () => {
+  const program = new Command();
 
-  for (let i = 1; i < process.argv.length; i++) {
-    switch (process.argv[i]) {
-      case '--user': {
-        if (process.argv[i+1]) {
-          args.user = process.argv[i+1];
-          i++;
-        }
-        else exitWithError('Error: "user" must specify a username.');
-        break;
-      }
-      case '--download': {
-        args.download = true;
-        break;
-      }
-      case '--dest': {
-        if (process.argv[i+1]) {
-          args.dest = process.argv[i+1];
-          i++;
-        }
-        else exitWithError('Error: "dest" must specify a valid directory.');
-        break;
-      }
-      case '--max': {
-        if (process.argv[i+1]) {
-          args.max = Number.parseInt(process.argv[i+1]);
+  program
+    .name('fetch-reddit-media')
+    .description('Fetch media from Reddit subreddits and profiles')
+    .version('0.4.0', '-v, --vers')
+    .option('-u, --user <username>', 'Search in a user profile')
+    .option('-s, --subreddit <subreddit>', 'Search in a subreddit')
+    .option('-d, --download', 'The media found will be downloaded')
+    .option('-o, --dest <destiny>', 'When downloading, the output directory')
+    .option(
+      '-m, --max <number>', 'The number of posts to fetch',
+      commanderParseNumber
+    )
 
-          if (!args.max) exitWithError('Error: "max" must be a positive integer.');
+  program.parse();
 
-          i++;
-        }
-        break;
-      }
-      case '--subreddit': {
-        if (process.argv[i+1]) {
-          args.subreddit = process.argv[i+1];
-          i++;
-        }
-        else exitWithError('Error: "subreddit" must specify a subreddit name.');
-        break;
-      }
-    }
+  return program.opts();
+}
+
+function commanderParseNumber(value, previous) {
+  const parsedValue = parseInt(value, 10);
+
+  if (isNaN(parsedValue)) {
+    throw new InvalidArgumentError('Not a number.');
   }
 
-  return args;
+  return parsedValue;
 }
 
 const exitWithError = (error) => {
@@ -91,7 +73,7 @@ const exitWithError = (error) => {
 }
 
 const getRedditPosts = async (options) => {
-  const reddit = new snoowrap(snoowrapConfig);
+  const reddit = new snoowrap(config.reddit);
   let postsItem;
   let posts;
 
@@ -101,8 +83,12 @@ const getRedditPosts = async (options) => {
   else postsItem = reddit.getSubreddit(options.source.data).getHot();
 
   try {
-    if (options.max) posts = await postsItem.fetchMore(options.max);
-    else posts = await postsItem.fetchAll();
+    if (options.max) {
+      posts = await postsItem.fetchMore(options.max);
+    }
+    else {
+      posts = await postsItem.fetchAll();
+    }
   } catch (error) {
     exitWithError(`Error: can't fetch posts for ${options.source.data}`);
   }
@@ -110,9 +96,24 @@ const getRedditPosts = async (options) => {
   return posts;
 }
 
+const loadPlugins = (pluginList) => {
+  const plugins = [];
+
+  if (pluginList.includes('imgur')) {
+    plugins.push(new ImgurClient(config.imgur));
+  }
+  if (pluginList.includes('redgifs')) {
+    plugins.push(new RedgifsClient());
+  }
+  if (pluginList.includes('vidble')) {
+    plugins.push(new VidbleClient());
+  }
+
+  return plugins;
+}
 
 const main = async () => {
-  const args = processArgs();
+  const args = getArgs();
 
   if (!args.user && !args.subreddit) {
     exitWithError('User or subreddit not specified.');
@@ -125,12 +126,7 @@ const main = async () => {
     max: args.max ? args.max : null
   });
 
-  const plugins = [
-    new ImgurClient(imgurConfig),
-    new GfycatClient(gfycatConfig),
-    new RedgifsClient(),
-    new VidbleClient(),
-  ];
+  const plugins = loadPlugins(config.plugins);
 
   // for links pointing directly to Reddit media
   const redditLinks = [];
@@ -158,13 +154,20 @@ const main = async () => {
 
         for (const plugin of plugins) {
           if (plugin.check(post.url)) {
-            downloadList.push(plugin.fetch(post.url));
+            const res = plugin.fetch(post.url);
+
+            if (res) downloadList.push(res);
+            
+            // if a plugin can process the url, then stop looking
             pluginDownloadAvailable = true;
             break;
           }
         }
 
-        if (!pluginDownloadAvailable) addLinks(post.url, redditLinks);
+        // if there's no plugin available to process the link, we add it as is
+        if (!pluginDownloadAvailable) {
+          addLinks(post.url, redditLinks);
+        }
       }
     }
   }
@@ -192,7 +195,7 @@ const main = async () => {
     }
     else {
       // overwrite resultFile with the links
-      fs.writeFile(resultFile, redditLinks.join('\r\n'), (err) => {
+      fs.writeFile(config.resultFile, redditLinks.join('\r\n'), (err) => {
         if (err) exitWithError(`Error writing results: ${err}`);
       });
     }

@@ -5,7 +5,7 @@ import { BasePlugin } from './baseplugin.js';
 export class VidbleClient extends BasePlugin {
   endpoint = 'https://www.vidble.com';
   urlTemplates = {
-    images: /https?\:\/\/(?:www\.)?vidble.com\/(?:show|album)\/(\w+)/ig,
+    images: /https?\:\/\/(?:www\.)?vidble.com\/(?:show|album)\/(\w+)/i,
   };
 
   async fetch(url) {
@@ -22,7 +22,7 @@ export class VidbleClient extends BasePlugin {
     const imageList = [];
 
     for (const image of page.window.document.getElementsByTagName("img")) {
-      if ((/^img\d/ig).exec(image.className) && (image.src))
+      if ((/^img\d/i).test(image.className) && (image.src))
         imageList.push(this.createUrl(image.src));
     }
 
@@ -45,6 +45,6 @@ export class VidbleClient extends BasePlugin {
   }
 
   check(url) {
-    return !(url.match(this.urlTemplates.images) == null);
+    return this.urlTemplates.images.test(url);
   }
 }

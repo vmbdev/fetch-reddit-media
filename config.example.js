@@ -1,19 +1,19 @@
-export const resultFile = './results.txt';
-
-export const snoowrapConfig = {
-  userAgent: '',
-  clientId: '',
-  clientSecret: '',
-  refreshToken: '',
-};
-
-export const imgurConfig = {
-  clientId: '',
-  clientSecret: ''
-}
-
-export const gfycatConfig = {
-  clientId: '',
-  clientSecret: '',
-  accessToken: ''
+export const config = {
+  resultFile: './results.txt',
+  plugins: [
+    'imgur',
+    'redgifs',
+    'vidble',
+    // 'gfycat'
+  ],
+  reddit: {
+    userAgent: '',
+    clientId: '',
+    clientSecret: '',
+    refreshToken: '',
+  },
+  imgur: {
+    clientId: '',
+    clientSecret: ''
+  }
 }

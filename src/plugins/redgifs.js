@@ -5,11 +5,12 @@ import { BasePlugin } from './baseplugin.js';
 export class RedgifsClient extends BasePlugin {
   endpoint = 'https://www.redgifs.com/watch';
   urlTemplates = {
-    gif: /https?\:\/\/(?:www\.)?redgifs.com\/watch\/(\w+)(?:\-.*)?/ig,
+    gif: /https?\:\/\/(?:.*\.)?redgifs.com\/watch\/(\w+)(?:\-.*)?/i,
   };
 
   async fetch(url) {
-    var conn;
+    let conn;
+
     try {
       conn = await axios.get(url);
     } catch (err) {
@@ -18,31 +19,33 @@ export class RedgifsClient extends BasePlugin {
     }
 
     const page = new JSDOM(conn.data);
-    // FIXME: fix query string processing
+    let videoUrl = null;
+
     for (const script of page.window.document.getElementsByTagName("script")) {
       if (script.type === "application/ld+json") {
-        const script_content = JSON.parse(script.text);
-        const video_url = script_content.video.contentUrl.replace(/\-mobile\.mp4$/ig, ".mp4");
+        const scriptContent = JSON.parse(script.text);
+        videoUrl = scriptContent.video.contentUrl.replace(/\-mobile\.mp4$/i, ".mp4");
 
-        return video_url;
+        break;
       }
     }
-    return null;
+
+    return videoUrl;
   }
 
   extractUrl(url, type) {
     switch (type) {
       case 'gif':
-        const gifid = this.urlTemplates.gif.exec(url);
-        return gifid ? gifid[1] : null;
+        const gifId = this.urlTemplates.gif.exec(url);
+        return gifId ? gifId[1] : null;
     }
   }
 
-  createUrl(gifid) {
-    return `${this.endpoint}/${gifid}`;
+  createUrl(gifId) {
+    return `${this.endpoint}/${gifId}`;
   }
 
   check(url) {
-    return !(url.match(this.urlTemplates.gif) == null);
+    return this.urlTemplates.gif.test(url);
   }
 }
